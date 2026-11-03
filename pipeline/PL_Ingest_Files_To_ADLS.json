@@ -14,7 +14,7 @@
 				"typeProperties": {
 					"variableName": "startTime",
 					"value": {
-						"value": "@utcnow()",
+						"value": "@utcNow()",
 						"type": "Expression"
 					}
 				}
@@ -159,7 +159,7 @@
 							"typeProperties": {
 								"variableName": "newFileName",
 								"value": {
-									"value": "@replace(item().name, variables('oldDate'), formatDateTime(utcnow(),'yyyyMMdd'))",
+									"value": "@replace(item().name, variables('oldDate'), formatDateTime(utcNow(),'yyyyMMdd'))",
 									"type": "Expression"
 								}
 							}
