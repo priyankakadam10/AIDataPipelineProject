@@ -1,0 +1,15 @@
+{
+	"name": "AIDataFactoryProject",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "centralindia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "57ec3233-2e29-427e-9fa4-c5821534d0e2",
+		"tenantId": "aa2db100-3a96-4cba-b4f5-f2907dbde22a"
+	}
+}
