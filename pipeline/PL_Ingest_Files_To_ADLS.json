@@ -1,691 +1,679 @@
 {
-  "name": "PL_Ingest_Files_To_ADLS",
-  "properties": {
-    "activities": [
-      {
-        "name": "Log Start Time",
-        "type": "SetVariable",
-        "dependsOn": [],
-        "policy": {
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "variableName": "startTime",
-          "value": {
-            "value": "@utcnow()",
-            "type": "Expression"
-          }
-        }
-      },
-      {
-        "name": "Check File In Source",
-        "type": "GetMetadata",
-        "dependsOn": [
-          {
-            "activity": "Log Start Time",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "policy": {
-          "timeout": "0.12:00:00",
-          "retry": 1,
-          "retryIntervalInSeconds": 30,
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "dataset": {
-            "referenceName": "DS_Source_Binary",
-            "type": "DatasetReference",
-            "parameters": {
-              "folderPath": {
-                "value": "@pipeline().parameters.sourceFolder",
-                "type": "Expression"
-              },
-              "fileName": ""
-            }
-          },
-          "fieldList": [
-            "childItems"
-          ],
-          "storeSettings": {
-            "type": "AzureBlobStorageReadSettings",
-            "recursive": false,
-            "enablePartitionDiscovery": false
-          },
-          "formatSettings": {
-            "type": "BinaryReadSettings"
-          }
-        }
-      },
-      {
-        "name": "Filter Relevant File",
-        "type": "Filter",
-        "dependsOn": [
-          {
-            "activity": "Check File In Source",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "userProperties": [],
-        "typeProperties": {
-          "items": {
-            "value": "@activity('Check File In Source').output.childItems",
-            "type": "Expression"
-          },
-          "condition": {
-            "value": "@and(equals(item().type,'File'),and(startswith(item().name,pipeline().parameters.filePrefix),endswith(item().name,pipeline().parameters.fileExtension)))",
-            "type": "Expression"
-          }
-        }
-      },
-      {
-        "name": "ForEach Relevant File",
-        "type": "ForEach",
-        "dependsOn": [
-          {
-            "activity": "Filter Relevant File",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "userProperties": [],
-        "typeProperties": {
-          "items": {
-            "value": "@activity('Filter Relevant File').output.Value",
-            "type": "Expression"
-          },
-          "isSequential": true,
-          "activities": [
-            {
-              "name": "Set Latest File",
-              "type": "SetVariable",
-              "dependsOn": [],
-              "policy": {
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "variableName": "latestFile",
-                "value": {
-                  "value": "@item().name",
-                  "type": "Expression"
-                }
-              }
-            },
-            {
-              "name": "Get Old Date",
-              "type": "SetVariable",
-              "dependsOn": [
-                {
-                  "activity": "Set Latest File",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "policy": {
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "variableName": "oldDate",
-                "value": {
-                  "value": "@substring(item().name, add(lastIndexOf(item().name,'_'),1), 8)",
-                  "type": "Expression"
-                }
-              }
-            },
-            {
-              "name": "Update Filename",
-              "type": "SetVariable",
-              "dependsOn": [
-                {
-                  "activity": "Get Old Date",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "policy": {
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "variableName": "newFileName",
-                "value": {
-                  "value": "@replace(item().name, variables('oldDate'), formatDateTime(utcnow(),'yyyyMMdd'))",
-                  "type": "Expression"
-                }
-              }
-            },
-            {
-              "name": "Copy File To ADLS",
-              "type": "Copy",
-              "dependsOn": [
-                {
-                  "activity": "Update Filename",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "policy": {
-                "timeout": "0.12:00:00",
-                "retry": 1,
-                "retryIntervalInSeconds": 30,
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "source": {
-                  "type": "BinarySource",
-                  "storeSettings": {
-                    "type": "AzureBlobStorageReadSettings",
-                    "recursive": false
-                  },
-                  "formatSettings": {
-                    "type": "BinaryReadSettings"
-                  }
-                },
-                "sink": {
-                  "type": "BinarySink",
-                  "storeSettings": {
-                    "type": "AzureBlobFSWriteSettings"
-                  }
-                },
-                "enableStaging": false
-              },
-              "inputs": [
-                {
-                  "referenceName": "DS_Source_Binary",
-                  "type": "DatasetReference",
-                  "parameters": {
-                    "folderPath": {
-                      "value": "@pipeline().parameters.sourceFolder",
-                      "type": "Expression"
-                    },
-                    "fileName": {
-                      "value": "@item().name",
-                      "type": "Expression"
-                    }
-                  }
-                }
-              ],
-              "outputs": [
-                {
-                  "referenceName": "DS_ADLS_Binary",
-                  "type": "DatasetReference",
-                  "parameters": {
-                    "folderPath": {
-                      "value": "@pipeline().parameters.adlsLandingFolder",
-                      "type": "Expression"
-                    },
-                    "fileName": {
-                      "value": "@variables('newFileName')",
-                      "type": "Expression"
-                    }
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Archive Source File",
-              "type": "Copy",
-              "dependsOn": [
-                {
-                  "activity": "Copy File To ADLS",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "policy": {
-                "timeout": "0.12:00:00",
-                "retry": 1,
-                "retryIntervalInSeconds": 30,
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "source": {
-                  "type": "BinarySource",
-                  "storeSettings": {
-                    "type": "AzureBlobStorageReadSettings",
-                    "recursive": false
-                  },
-                  "formatSettings": {
-                    "type": "BinaryReadSettings"
-                  }
-                },
-                "sink": {
-                  "type": "BinarySink",
-                  "storeSettings": {
-                    "type": "AzureBlobFSWriteSettings"
-                  }
-                },
-                "enableStaging": false
-              },
-              "inputs": [
-                {
-                  "referenceName": "DS_Source_Binary",
-                  "type": "DatasetReference",
-                  "parameters": {
-                    "folderPath": {
-                      "value": "@pipeline().parameters.sourceFolder",
-                      "type": "Expression"
-                    },
-                    "fileName": {
-                      "value": "@item().name",
-                      "type": "Expression"
-                    }
-                  }
-                }
-              ],
-              "outputs": [
-                {
-                  "referenceName": "DS_ADLS_Binary",
-                  "type": "DatasetReference",
-                  "parameters": {
-                    "folderPath": {
-                      "value": "@concat(pipeline().parameters.adlsArchiveFolder,'/',formatDateTime(utcnow(),'yyyy/MM/dd'))",
-                      "type": "Expression"
-                    },
-                    "fileName": {
-                      "value": "@item().name",
-                      "type": "Expression"
-                    }
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Delete Source File",
-              "type": "Delete",
-              "dependsOn": [
-                {
-                  "activity": "Archive Source File",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "policy": {
-                "timeout": "0.12:00:00",
-                "retry": 1,
-                "retryIntervalInSeconds": 30,
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "dataset": {
-                  "referenceName": "DS_Source_Binary",
-                  "type": "DatasetReference",
-                  "parameters": {
-                    "folderPath": {
-                      "value": "@pipeline().parameters.sourceFolder",
-                      "type": "Expression"
-                    },
-                    "fileName": {
-                      "value": "@item().name",
-                      "type": "Expression"
-                    }
-                  }
-                },
-                "enableLogging": false,
-                "storeSettings": {
-                  "type": "AzureBlobStorageReadSettings",
-                  "recursive": false,
-                  "enablePartitionDiscovery": false
-                }
-              }
-            },
-            {
-              "name": "Set Log Var",
-              "type": "AppendVariable",
-              "dependsOn": [
-                {
-                  "activity": "Delete Source File",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "userProperties": [],
-              "typeProperties": {
-                "variableName": "logLines",
-                "value": {
-                  "value": "@concat(formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss'),' | ',variables('latestFile'),' -> ',variables('newFileName'),' | copied and archived')",
-                  "type": "Expression"
-                }
-              }
-            },
-            {
-              "name": "Set Temp Var",
-              "type": "SetVariable",
-              "dependsOn": [
-                {
-                  "activity": "Set Log Var",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "policy": {
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "variableName": "tempCount",
-                "value": {
-                  "value": "@string(add(int(variables('processedCount')),1))",
-                  "type": "Expression"
-                }
-              }
-            },
-            {
-              "name": "Set Processed Count",
-              "type": "SetVariable",
-              "dependsOn": [
-                {
-                  "activity": "Set Temp Var",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "policy": {
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "variableName": "processedCount",
-                "value": {
-                  "value": "@variables('tempCount')",
-                  "type": "Expression"
-                }
-              }
-            }
-          ]
-        }
-      },
-      {
-        "name": "Check Source For Pending",
-        "type": "GetMetadata",
-        "dependsOn": [
-          {
-            "activity": "ForEach Relevant File",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "policy": {
-          "timeout": "0.12:00:00",
-          "retry": 1,
-          "retryIntervalInSeconds": 30,
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "dataset": {
-            "referenceName": "DS_Source_Binary",
-            "type": "DatasetReference",
-            "parameters": {
-              "folderPath": {
-                "value": "@pipeline().parameters.sourceFolder",
-                "type": "Expression"
-              },
-              "fileName": ""
-            }
-          },
-          "fieldList": [
-            "childItems"
-          ],
-          "storeSettings": {
-            "type": "AzureBlobStorageReadSettings",
-            "recursive": false,
-            "enablePartitionDiscovery": false
-          },
-          "formatSettings": {
-            "type": "BinaryReadSettings"
-          }
-        }
-      },
-      {
-        "name": "Filter Pending File",
-        "type": "Filter",
-        "dependsOn": [
-          {
-            "activity": "Check Source For Pending",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "userProperties": [],
-        "typeProperties": {
-          "items": {
-            "value": "@activity('Check Source For Pending').output.childItems",
-            "type": "Expression"
-          },
-          "condition": {
-            "value": "@and(equals(item().type,'File'),and(startswith(item().name,pipeline().parameters.filePrefix),endswith(item().name,pipeline().parameters.fileExtension)))",
-            "type": "Expression"
-          }
-        }
-      },
-      {
-        "name": "If Pending Files",
-        "type": "IfCondition",
-        "dependsOn": [
-          {
-            "activity": "Filter Pending File",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "userProperties": [],
-        "typeProperties": {
-          "expression": {
-            "value": "@greater(activity('Filter Pending File').output.FilteredItemsCount,0)",
-            "type": "Expression"
-          },
-          "ifTrueActivities": [
-            {
-              "name": "Copy Pending Files",
-              "type": "Copy",
-              "dependsOn": [],
-              "policy": {
-                "timeout": "0.12:00:00",
-                "retry": 1,
-                "retryIntervalInSeconds": 30,
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "source": {
-                  "type": "BinarySource",
-                  "storeSettings": {
-                    "type": "AzureBlobStorageReadSettings",
-                    "recursive": false,
-                    "wildcardFolderPath": {
-                      "value": "@pipeline().parameters.sourceFolder",
-                      "type": "Expression"
-                    },
-                    "wildcardFileName": {
-                      "value": "@concat(pipeline().parameters.filePrefix,'*')",
-                      "type": "Expression"
-                    },
-                    "enablePartitionDiscovery": false
-                  },
-                  "formatSettings": {
-                    "type": "BinaryReadSettings"
-                  }
-                },
-                "sink": {
-                  "type": "BinarySink",
-                  "storeSettings": {
-                    "type": "AzureBlobFSWriteSettings"
-                  }
-                },
-                "enableStaging": false
-              },
-              "inputs": [
-                {
-                  "referenceName": "DS_Source_Binary",
-                  "type": "DatasetReference",
-                  "parameters": {
-                    "folderPath": "",
-                    "fileName": ""
-                  }
-                }
-              ],
-              "outputs": [
-                {
-                  "referenceName": "DS_ADLS_Binary",
-                  "type": "DatasetReference",
-                  "parameters": {
-                    "folderPath": {
-                      "value": "@pipeline().parameters.adlsLandingFolder",
-                      "type": "Expression"
-                    },
-                    "fileName": ""
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Log Pending Copied",
-              "type": "AppendVariable",
-              "dependsOn": [
-                {
-                  "activity": "Copy Pending Files",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "userProperties": [],
-              "typeProperties": {
-                "variableName": "logLines",
-                "value": {
-                  "value": "@concat(formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss'),' | pending files copied')",
-                  "type": "Expression"
-                }
-              }
-            }
-          ],
-          "ifFalseActivities": [
-            {
-              "name": "Log No Pending",
-              "type": "AppendVariable",
-              "dependsOn": [],
-              "userProperties": [],
-              "typeProperties": {
-                "variableName": "logLines",
-                "value": {
-                  "value": "@concat(formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss'),' | no pending files')",
-                  "type": "Expression"
-                }
-              }
-            }
-          ]
-        }
-      },
-      {
-        "name": "Final Close With Log",
-        "type": "SetVariable",
-        "dependsOn": [
-          {
-            "activity": "If Pending Files",
-            "dependencyConditions": [
-              "Completed"
-            ]
-          }
-        ],
-        "policy": {
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "variableName": "finalLog",
-          "value": {
-            "value": "@concat('Started: ',variables('startTime'),' | Ended: ',utcnow(),' | Files processed: ',variables('processedCount'),' | ',join(variables('logLines'),' ; '))",
-            "type": "Expression"
-          }
-        }
-      }
-    ],
-    "parameters": {
-      "sourceFolder": {
-        "type": "string",
-        "defaultValue": "incoming"
-      },
-      "filePrefix": {
-        "type": "string",
-        "defaultValue": "sales"
-      },
-      "fileExtension": {
-        "type": "string",
-        "defaultValue": ".csv"
-      },
-      "adlsLandingFolder": {
-        "type": "string",
-        "defaultValue": "raw/sales"
-      },
-      "adlsArchiveFolder": {
-        "type": "string",
-        "defaultValue": "archive/sales"
-      }
-    },
-    "variables": {
-      "startTime": {
-        "type": "String"
-      },
-      "latestFile": {
-        "type": "String"
-      },
-      "oldDate": {
-        "type": "String"
-      },
-      "newFileName": {
-        "type": "String"
-      },
-      "logLines": {
-        "type": "Array"
-      },
-      "processedCount": {
-        "type": "String",
-        "defaultValue": "0"
-      },
-      "tempCount": {
-        "type": "String"
-      },
-      "finalLog": {
-        "type": "String"
-      }
-    },
-    "annotations": []
-  }
+	"name": "PL_Ingest_Files_To_ADLS",
+	"properties": {
+		"activities": [
+			{
+				"name": "Log Start Time",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "startTime",
+					"value": {
+						"value": "@utcnow()",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Check File In Source",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "Log Start Time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DS_Source_Binary",
+						"type": "DatasetReference",
+						"parameters": {
+							"folderPath": {
+								"value": "@pipeline().parameters.sourceFolder",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"formatSettings": {
+						"type": "BinaryReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Filter Relevant File",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Check File In Source",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Check File In Source').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@and(equals(item().type,'File'),and(startswith(item().name,pipeline().parameters.filePrefix),endswith(item().name,pipeline().parameters.fileExtension)))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ForEach Relevant File",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Filter Relevant File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter Relevant File').output.Value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Set Latest File",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "latestFile",
+								"value": {
+									"value": "@item().name",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Get Old Date",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set Latest File",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "oldDate",
+								"value": {
+									"value": "@substring(item().name, add(lastIndexOf(item().name,'_'),1), 8)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Update Filename",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Get Old Date",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "newFileName",
+								"value": {
+									"value": "@replace(item().name, variables('oldDate'), formatDateTime(utcnow(),'yyyyMMdd'))",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Copy File To ADLS",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Update Filename",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": false
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings",
+										"copyBehavior": "PreserveHierarchy"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_Source_Binary",
+									"type": "DatasetReference",
+									"parameters": {
+										"folderPath": {
+											"value": "@pipeline().parameters.sourceFolder",
+											"type": "Expression"
+										},
+										"fileName": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_ADLS_Binary",
+									"type": "DatasetReference",
+									"parameters": {
+										"folderPath": {
+											"value": "@pipeline().parameters.adlsLandingFolder",
+											"type": "Expression"
+										},
+										"fileName": {
+											"value": "@variables('newFileName')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Archive Source File",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Copy File To ADLS",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": false
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_Source_Binary",
+									"type": "DatasetReference",
+									"parameters": {
+										"folderPath": {
+											"value": "@pipeline().parameters.sourceFolder",
+											"type": "Expression"
+										},
+										"fileName": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_ADLS_Binary",
+									"type": "DatasetReference",
+									"parameters": {
+										"folderPath": {
+											"value": "@concat(pipeline().parameters.adlsArchiveFolder,'/',formatDateTime(utcnow(),'yyyy/MM/dd'))",
+											"type": "Expression"
+										},
+										"fileName": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Delete Source File",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "Archive Source File",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "DS_Source_Binary",
+									"type": "DatasetReference",
+									"parameters": {
+										"folderPath": {
+											"value": "@pipeline().parameters.sourceFolder",
+											"type": "Expression"
+										},
+										"fileName": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": false,
+									"enablePartitionDiscovery": false
+								}
+							}
+						},
+						{
+							"name": "Set Log Var",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Delete Source File",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "logLines",
+								"value": {
+									"value": "@concat(formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss'),' | ',variables('latestFile'),' -> ',variables('newFileName'),' | copied and archived')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set Temp Var",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set Log Var",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "tempCount",
+								"value": {
+									"value": "@string(add(int(variables('processedCount')),1))",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set Processed Count",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set Temp Var",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "processedCount",
+								"value": {
+									"value": "@variables('tempCount')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Check Source For Pending",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "ForEach Relevant File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DS_Source_Binary",
+						"type": "DatasetReference",
+						"parameters": {
+							"folderPath": {
+								"value": "@pipeline().parameters.sourceFolder",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobStorageReadSettings",
+						"recursive": false,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "BinaryReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Filter Pending File",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Check Source For Pending",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Check Source For Pending').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@and(equals(item().type,'File'),and(startswith(item().name,pipeline().parameters.filePrefix),endswith(item().name,pipeline().parameters.fileExtension)))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "If Pending Files",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Filter Pending File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Filter Pending File').output.FilteredItemsCount,0)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Log No Pending",
+							"type": "AppendVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "logLines",
+								"value": {
+									"value": "@concat(formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss'),' | no pending files')",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Copy Pending Files",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": false,
+										"wildcardFolderPath": {
+											"value": "@pipeline().parameters.sourceFolder",
+											"type": "Expression"
+										},
+										"wildcardFileName": {
+											"value": "@concat(pipeline().parameters.filePrefix,'*')",
+											"type": "Expression"
+										}
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_Source_Binary",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_ADLS_Binary",
+									"type": "DatasetReference",
+									"parameters": {
+										"folderPath": {
+											"value": "@pipeline().parameters.adlsLandingFolder",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Log Pending Copied",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Copy Pending Files",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "logLines",
+								"value": {
+									"value": "@concat(formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss'),' | pending files copied')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Final Close With Log",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "If Pending Files",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "finalLog",
+					"value": {
+						"value": "@concat('Started: ',variables('startTime'),' | Ended: ',utcnow(),' | Files processed: ',variables('processedCount'),' | ',join(variables('logLines'),' ; '))",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"sourceFolder": {
+				"type": "string",
+				"defaultValue": "incoming"
+			},
+			"filePrefix": {
+				"type": "string",
+				"defaultValue": "sales"
+			},
+			"fileExtension": {
+				"type": "string",
+				"defaultValue": ".csv"
+			},
+			"adlsLandingFolder": {
+				"type": "string",
+				"defaultValue": "raw/sales"
+			},
+			"adlsArchiveFolder": {
+				"type": "string",
+				"defaultValue": "archive/sales"
+			}
+		},
+		"variables": {
+			"startTime": {
+				"type": "String"
+			},
+			"latestFile": {
+				"type": "String"
+			},
+			"oldDate": {
+				"type": "String"
+			},
+			"newFileName": {
+				"type": "String"
+			},
+			"logLines": {
+				"type": "Array"
+			},
+			"processedCount": {
+				"type": "String",
+				"defaultValue": "0"
+			},
+			"tempCount": {
+				"type": "String"
+			},
+			"finalLog": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
 }

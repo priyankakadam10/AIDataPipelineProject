@@ -1,33 +1,33 @@
 {
-  "name": "DS_ADLS_Binary",
-  "properties": {
-    "linkedServiceName": {
-      "referenceName": "LS_ADLS_Gen2",
-      "type": "LinkedServiceReference"
-    },
-    "parameters": {
-      "folderPath": {
-        "type": "string"
-      },
-      "fileName": {
-        "type": "string"
-      }
-    },
-    "annotations": [],
-    "type": "Binary",
-    "typeProperties": {
-      "location": {
-        "type": "AzureBlobFSLocation",
-        "fileName": {
-          "value": "@dataset().fileName",
-          "type": "Expression"
-        },
-        "folderPath": {
-          "value": "@dataset().folderPath",
-          "type": "Expression"
-        },
-        "fileSystem": "landing"
-      }
-    }
-  }
+	"name": "DS_ADLS_Binary",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataStorageAI",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"folderPath": {
+				"type": "string"
+			},
+			"fileName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().fileName",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().folderPath",
+					"type": "Expression"
+				},
+				"fileSystem": "landing"
+			}
+		}
+	}
 }
