@@ -1,0 +1,30 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "AIDataFactoryProject"
+		},
+		"AIdataproject_password": {
+			"value": ""
+		},
+		"AzureDataStorageAI_accountKey": {
+			"value": ""
+		},
+		"AIdataproject_properties_typeProperties_server": {
+			"value": "dataserverai.database.windows.net"
+		},
+		"AIdataproject_properties_typeProperties_database": {
+			"value": "AIProject"
+		},
+		"AIdataproject_properties_typeProperties_userName": {
+			"value": "dataserverai"
+		},
+		"AzureDataStorageAI_properties_typeProperties_url": {
+			"value": "https://aidataproject.dfs.core.windows.net/"
+		},
+		"HttpServer1_properties_typeProperties_url": {
+			"value": "https://raw.githubusercontent.com/"
+		}
+	}
+}

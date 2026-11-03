@@ -1,0 +1,91 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "AIDataFactoryProject"
+		},
+		"AIdataproject_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'AIdataproject'"
+		},
+		"AzureDataStorageAI_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'AzureDataStorageAI'"
+		},
+		"AIdataproject_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "dataserverai.database.windows.net"
+		},
+		"AIdataproject_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "AIProject"
+		},
+		"AIdataproject_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "dataserverai"
+		},
+		"AzureDataStorageAI_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://aidataproject.dfs.core.windows.net/"
+		},
+		"HttpServer1_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://raw.githubusercontent.com/"
+		},
+		"containerUri": {
+			"type": "string",
+			"metadata": "URI to storage account containing linked ARM templates"
+		},
+		"containerSasToken": {
+			"type": "string",
+			"metadata": "Sas token to storage account containing linked ARM templates"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "AIDataFactoryProject_ArmTemplate_0",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2024-03-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"AIdataproject_password": {
+						"value": "[parameters('AIdataproject_password')]"
+					},
+					"AzureDataStorageAI_accountKey": {
+						"value": "[parameters('AzureDataStorageAI_accountKey')]"
+					},
+					"AIdataproject_properties_typeProperties_server": {
+						"value": "[parameters('AIdataproject_properties_typeProperties_server')]"
+					},
+					"AIdataproject_properties_typeProperties_database": {
+						"value": "[parameters('AIdataproject_properties_typeProperties_database')]"
+					},
+					"AIdataproject_properties_typeProperties_userName": {
+						"value": "[parameters('AIdataproject_properties_typeProperties_userName')]"
+					},
+					"AzureDataStorageAI_properties_typeProperties_url": {
+						"value": "[parameters('AzureDataStorageAI_properties_typeProperties_url')]"
+					},
+					"HttpServer1_properties_typeProperties_url": {
+						"value": "[parameters('HttpServer1_properties_typeProperties_url')]"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
