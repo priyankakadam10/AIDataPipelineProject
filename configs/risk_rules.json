@@ -1,0 +1,22 @@
+{
+  "severity": {
+    "SCHEMA_ALIAS": 0.1,
+    "DUPLICATE_ROW": 0.4,
+    "NULL_OPTIONAL": 0.5,
+    "NULL_MANDATORY": 0.8,
+    "INVALID_DATATYPE": 0.9,
+    "MISSING_CRITICAL_COLUMN": 1.0
+  },
+
+  "business_impact": {
+    "customer_id": 1.0,
+    "customer_name": 0.2,
+    "customer_email": 0.2,
+    "customer_age": 0.2
+  },
+
+  "thresholds": {
+    "auto_fix": 0.3,
+    "review": 0.7
+  }
+}

@@ -1,0 +1,5 @@
+pandas
+scikit-learn
+rapidfuzz
+sentence-transformers
+pyarrow

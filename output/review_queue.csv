@@ -1,0 +1,3 @@
+issue_type,column_name,value,action
+NULL_MANDATORY,customer_email,NULL,REVIEW
+3,Amit,amit@gmail.com,150,INVALID_AGE,REVIEW

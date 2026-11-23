@@ -1,0 +1,34 @@
+{
+  "customer_name": [
+    "name",
+    "names",
+    "nm",
+    "customername",
+    "customer_name",
+    "cust_name"
+  ],
+
+  "customer_email": [
+    "email",
+    "mail",
+    "emailid",
+    "email_address",
+    "customer_email",
+    "cust_email"
+  ],
+
+  "customer_age": [
+    "age",
+    "years",
+    "cust_age",
+    "customer_age"
+  ],
+
+  "customer_id": [
+    "id",
+    "cust_id",
+    "customerid",
+    "client_id",
+    "customer_id"
+  ]
+}

@@ -1,0 +1,4 @@
+customer_id,customer_name,customer_email,customer_age
+1,Rahul,rahul@gmail.com,30
+2,Priya,,25
+3,Amit,amit@gmail.com,150

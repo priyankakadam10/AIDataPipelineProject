@@ -1,0 +1,21 @@
+{
+  "customer_id": {
+    "datatype": "string",
+    "mandatory": true
+  },
+
+  "customer_name": {
+    "datatype": "string",
+    "mandatory": true
+  },
+
+  "customer_email": {
+    "datatype": "string",
+    "mandatory": true
+  },
+
+  "customer_age": {
+    "datatype": "integer",
+    "mandatory": false
+  }
+}
